@@ -1,0 +1,27 @@
+<!doctype html>
+<html>
+  <body>
+    <h2>App</h2>
+    <div id="me"></div>
+    <button id="logout">Logout</button>
+
+    <script>
+      async function loadMe() {
+        const res = await fetch("/auth/me", { credentials: "include" });
+        if (!res.ok) {
+          location.href = "/login.html";
+          return;
+        }
+        const data = await res.json();
+        document.getElementById("me").textContent = "Logged in as: " + data.user.username;
+      }
+
+      document.getElementById("logout").onclick = async () => {
+        await fetch("/auth/logout", { method: "POST", credentials: "include" });
+        location.href = "/login.html";
+      };
+
+      loadMe();
+    </script>
+  </body>
+</html>

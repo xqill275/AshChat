@@ -1,0 +1,28 @@
+<!doctype html>
+<html>
+  <body>
+    <h2>Login</h2>
+    <input id="email" placeholder="email" /><br />
+    <input id="password" type="password" placeholder="password" /><br />
+    <button id="btn">Login</button>
+    <button id="reg">Go to Register</button>
+    <pre id="out"></pre>
+
+    <script>
+      document.getElementById("btn").onclick = async () => {
+        const res = await fetch("/auth/login", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ email: email.value, password: password.value })
+        });
+        out.textContent = await res.text();
+        if (res.ok) location.href = "/app.html";
+      };
+
+        document.getElementById("reg").onclick = () => {
+            location.href = "/register.html";
+        };
+    </script>
+  </body>
+</html>
