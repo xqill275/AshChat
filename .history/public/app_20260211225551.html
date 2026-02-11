@@ -26,7 +26,7 @@
         display: none;
         min-width: 160px;
         border: 1px solid #ccc;
-        background: rgb(0, 0, 0);
+        background: white;
         box-shadow: 0 8px 24px rgba(0,0,0,0.12);
         padding: 6px;
         z-index: 9999;
@@ -318,7 +318,7 @@
         sendBtn.disabled = !isText;
 
         if (!isText) {
-          messagesEl.innerHTML = "<i>This is a voice channel. (WIP.)</i>";
+          messagesEl.innerHTML = "<i>This is a voice channel. (We’ll add voice next.)</i>";
           return;
         }
 

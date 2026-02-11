@@ -29,7 +29,6 @@ const JWT_SECRET = process.env.JWT_SECRET || "change_me_dev_secret";
 
 app.get("/", (req, res) => {
   res.redirect("/register.html");
-});
 
 // ---- Socket auth: read JWT from cookie ----
 io.use((socket, next) => {

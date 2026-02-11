@@ -6,22 +6,21 @@ const router = express.Router();
 
 // Sidebar channel list
 router.get("/", auth, async (req, res) => {
-  const [rows] = await db.execute(
-    "SELECT id, name, type FROM channels ORDER BY id ASC"
-  );
-  res.json({ channels: rows });
+const [rows] = await db.execute(
+  "SELECT id, name, type FROM channels ORDER BY id ASC"
+);
+res.json({ channels: rows });
 });
 
 // Create a new channel
 router.post("/", auth, async (req, res) => {
-  const rawName = String(req.body?.name || "").trim();
-  const rawType = String(req.body?.type || "TEXT").toUpperCase();
+  const name = String(req.body?.name || "").trim();
 
-  if (!rawName) return res.status(400).json({ error: "Channel name required" });
+  if (!name) return res.status(400).json({ error: "Channel name required" });
+  if (name.length > 64) return res.status(400).json({ error: "Channel name too long" });
 
-  const type = rawType === "VOICE" ? "VOICE" : "TEXT";
-
-  const cleanName = rawName
+  // basic "discord-like" formatting: lowercase + replace spaces with dashes
+  const cleanName = name
     .toLowerCase()
     .replace(/\s+/g, "-")
     .replace(/[^a-z0-9-_]/g, "");
@@ -30,12 +29,13 @@ router.post("/", auth, async (req, res) => {
 
   try {
     const [result] = await db.execute(
-      "INSERT INTO channels (name, type) VALUES (?, ?)",
-      [cleanName, type]
+      "INSERT INTO channels (name) VALUES (?)",
+      [cleanName]
     );
 
-    res.json({ channel: { id: result.insertId, name: cleanName, type } });
-  } catch {
+    res.json({ channel: { id: result.insertId, name: cleanName } });
+  } catch (e) {
+    // if you have UNIQUE(name) this will catch duplicates
     res.status(400).json({ error: "Channel name already exists (or DB error)" });
   }
 });
