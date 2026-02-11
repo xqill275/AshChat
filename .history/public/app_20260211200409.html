@@ -11,35 +11,10 @@
       #composer { display:flex; gap:8px; padding:12px; border-top:1px solid #ddd; }
       input, button { padding:10px; }
       input { flex:1; }
-
       .chan { width:100%; text-align:left; padding:8px; margin-top:6px; border:1px solid #ddd; background:white; cursor:pointer; }
       .chan.active { background:#eee; }
-
       .msg { margin-bottom:10px; }
       .meta { opacity:0.6; font-size:12px; margin-left:6px; }
-
-      /* Right-click context menu */
-      #ctxMenu {
-        position: fixed;
-        display: none;
-        min-width: 160px;
-        border: 1px solid #ccc;
-        background: white;
-        box-shadow: 0 8px 24px rgba(0,0,0,0.12);
-        padding: 6px;
-        z-index: 9999;
-      }
-      #ctxMenu button {
-        width: 100%;
-        text-align: left;
-        padding: 8px;
-        border: none;
-        background: transparent;
-        cursor: pointer;
-      }
-      #ctxMenu button:hover { background: #eee; }
-      #ctxMenu .danger { color: #b00020; }
-      #ctxMenu .danger:hover { background: #ffe9ec; }
     </style>
   </head>
   <body>
@@ -47,12 +22,10 @@
       <div id="me" style="margin-bottom:12px;"></div>
 
       <button id="logout" style="width:100%; padding:10px;">Logout</button>
-
       <div style="display:flex; align-items:center; justify-content:space-between; margin:16px 0 8px;">
         <h3 style="margin:0;">Channels</h3>
         <button id="addChannel" title="Add channel" style="padding:6px 10px;">+</button>
       </div>
-
       <div id="channels"></div>
       <pre id="channelError" style="color:#b00; white-space:pre-wrap;"></pre>
     </aside>
@@ -70,11 +43,6 @@
       </div>
     </main>
 
-    <!-- Context menu -->
-    <div id="ctxMenu">
-      <button id="ctxDelete" class="danger">Delete</button>
-    </div>
-
     <script src="/socket.io/socket.io.js"></script>
     <script>
       const channelsEl = document.getElementById("channels");
@@ -84,22 +52,20 @@
       const draftEl = document.getElementById("draft");
       const sendBtn = document.getElementById("send");
 
-      const addChannelBtn = document.getElementById("addChannel");
-      const channelErrorEl = document.getElementById("channelError");
-
-      // Context menu elements/state
-      const ctxMenu = document.getElementById("ctxMenu");
-      const ctxDelete = document.getElementById("ctxDelete");
-      let ctxChannel = null; // { id, name }
-
       let activeChannelId = null;
 
       const socket = io({ withCredentials: true });
 
-      socket.on("connect", () => console.log("socket connected"));
-      socket.on("connect_error", (err) => console.log("socket connect_error:", err.message));
+      socket.on("connect", () => {
+        console.log("socket connected");
+      });
+
+      socket.on("connect_error", (err) => {
+        console.log("socket connect_error:", err.message);
+      });
 
       socket.on("message:new", (payload) => {
+        // only display messages for current channel
         if (Number(payload.channelId) !== Number(activeChannelId)) return;
         renderMessage(payload.message);
         messagesEl.scrollTop = messagesEl.scrollHeight;
@@ -131,29 +97,6 @@
         meEl.innerHTML = `<b>Logged in:</b> ${escapeHtml(data.user.username)}`;
       }
 
-      function hideCtxMenu() {
-        ctxMenu.style.display = "none";
-        ctxChannel = null;
-      }
-
-      function showCtxMenu(x, y, channel) {
-        ctxChannel = channel;
-
-        const menuW = 170;
-        const menuH = 60;
-        const px = Math.min(x, window.innerWidth - menuW - 8);
-        const py = Math.min(y, window.innerHeight - menuH - 8);
-
-        ctxMenu.style.left = px + "px";
-        ctxMenu.style.top = py + "px";
-        ctxMenu.style.display = "block";
-      }
-
-      document.addEventListener("click", () => hideCtxMenu());
-      document.addEventListener("keydown", (e) => { if (e.key === "Escape") hideCtxMenu(); });
-      window.addEventListener("resize", hideCtxMenu);
-      window.addEventListener("scroll", hideCtxMenu);
-
       async function loadChannels() {
         const res = await fetch("/channels", { credentials: "include" });
         if (!res.ok) return;
@@ -166,16 +109,7 @@
           btn.className = "chan";
           btn.textContent = "# " + ch.name;
           btn.dataset.id = ch.id;
-
           btn.onclick = () => openChannel(ch.id, ch.name);
-
-          // Right click menu
-          btn.addEventListener("contextmenu", (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            showCtxMenu(e.clientX, e.clientY, { id: ch.id, name: ch.name });
-          });
-
           channelsEl.appendChild(btn);
         });
       }
@@ -190,13 +124,19 @@
 
         messagesEl.innerHTML = "";
 
+        // join socket room for this channel
         socket.emit("channel:join", { channelId: activeChannelId });
 
+        // enable composer
         draftEl.disabled = false;
         sendBtn.disabled = false;
         draftEl.focus();
 
-        const res = await fetch(`/channels/${id}/messages?limit=50`, { credentials: "include" });
+        // load history
+        const res = await fetch(`/channels/${id}/messages?limit=50`, {
+          credentials: "include",
+        });
+
         if (!res.ok) {
           messagesEl.innerHTML = "<i>Failed to load messages</i>";
           return;
@@ -212,7 +152,10 @@
         if (!activeChannelId) return;
         if (!text.trim()) return;
 
-        socket.emit("message:send", { channelId: activeChannelId, content: text });
+        socket.emit("message:send", {
+          channelId: activeChannelId,
+          content: text
+        });
 
         draftEl.value = "";
         draftEl.focus();
@@ -226,78 +169,6 @@
       document.getElementById("logout").onclick = async () => {
         await fetch("/auth/logout", { method: "POST", credentials: "include" });
         location.href = "/login.html";
-      };
-
-      addChannelBtn.onclick = async () => {
-        channelErrorEl.textContent = "";
-
-        const name = prompt("New channel name (e.g. gaming, general-chat):");
-        if (name === null) return;
-
-        const res = await fetch("/channels", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ name })
-        });
-
-        const dataText = await res.text();
-        let data;
-        try { data = JSON.parse(dataText); } catch { data = { error: dataText }; }
-
-        if (!res.ok) {
-          channelErrorEl.textContent = data.error || "Failed to create channel";
-          return;
-        }
-
-        await loadChannels();
-        if (data.channel?.id) openChannel(data.channel.id, data.channel.name);
-      };
-
-      ctxDelete.onclick = async (e) => {
-        e.stopPropagation();
-        if (!ctxChannel) return;
-
-        const id = ctxChannel.id;
-        const name = ctxChannel.name;
-
-        if (!confirm(`Delete #${name}? This deletes all messages in it.`)) {
-          hideCtxMenu();
-          return;
-        }
-
-        const res = await fetch(`/channels/${id}`, {
-          method: "DELETE",
-          credentials: "include",
-        });
-
-        const txt = await res.text();
-        let data;
-        try { data = JSON.parse(txt); } catch { data = { error: txt }; }
-
-        hideCtxMenu();
-
-        if (!res.ok) {
-          alert(data.error || "Failed to delete channel");
-          return;
-        }
-
-        // If active channel deleted, reset chat UI
-        if (Number(activeChannelId) === Number(id)) {
-          activeChannelId = null;
-          channelTitleEl.textContent = "Pick a channel";
-          messagesEl.innerHTML = "";
-          draftEl.disabled = true;
-          sendBtn.disabled = true;
-        }
-
-        await loadChannels();
-
-        // Auto-open first channel if none active
-        if (!activeChannelId) {
-          const first = document.querySelector(".chan");
-          if (first) first.click();
-        }
       };
 
       (async () => {

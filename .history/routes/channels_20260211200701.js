@@ -47,11 +47,17 @@ router.delete("/:id", auth, async (req, res) => {
   const conn = await db.getConnection();
   try {
     await conn.beginTransaction();
+
+    // delete messages first to satisfy FK
     await conn.execute("DELETE FROM messages WHERE channel_id = ?", [channelId]);
+
+    // then delete channel
     const [result] = await conn.execute("DELETE FROM channels WHERE id = ?", [channelId]);
+
     await conn.commit();
 
     if (result.affectedRows === 0) return res.status(404).json({ error: "Channel not found" });
+
     res.json({ ok: true });
   } catch (e) {
     await conn.rollback();

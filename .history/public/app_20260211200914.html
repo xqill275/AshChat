@@ -1,0 +1,265 @@
+<!doctype html>
+<html>
+  <head>
+    <title>App</title>
+    <style>
+      body { margin:0; font-family:system-ui; height:100vh; display:flex; }
+      #sidebar { width:260px; border-right:1px solid #ddd; padding:12px; box-sizing:border-box; }
+      #main { flex:1; display:flex; flex-direction:column; }
+      #topbar { padding:12px; border-bottom:1px solid #ddd; }
+      #messages { flex:1; overflow:auto; padding:12px; }
+      #composer { display:flex; gap:8px; padding:12px; border-top:1px solid #ddd; }
+      input, button { padding:10px; }
+      input { flex:1; }
+      .chan { width:100%; text-align:left; padding:8px; margin-top:6px; border:1px solid #ddd; background:white; cursor:pointer; }
+      .chan.active { background:#eee; }
+      .msg { margin-bottom:10px; }
+      .meta { opacity:0.6; font-size:12px; margin-left:6px; }
+      .chanRow { display:flex; gap:6px; margin-top:6px; }
+      .chanRow button { cursor:pointer; }
+      .chanBtn { flex:1; text-align:left; padding:8px; border:1px solid #ddd; background:white; }
+      .chanBtn.active { background:#eee; }
+      .delBtn { padding:8px; border:1px solid #ddd; background:#fff; }
+      .delBtn:hover { background:#fee; }
+    </style>
+  </head>
+  <body>
+    <aside id="sidebar">
+      <div id="me" style="margin-bottom:12px;"></div>
+
+      <button id="logout" style="width:100%; padding:10px;">Logout</button>
+      <div style="display:flex; align-items:center; justify-content:space-between; margin:16px 0 8px;">
+        <h3 style="margin:0;">Channels</h3>
+        <button id="addChannel" title="Add channel" style="padding:6px 10px;">+</button>
+      </div>
+      <div id="channels"></div>
+      <pre id="channelError" style="color:#b00; white-space:pre-wrap;"></pre>
+    </aside>
+
+    <main id="main">
+      <div id="topbar">
+        <b id="channelTitle">Pick a channel</b>
+      </div>
+
+      <div id="messages"></div>
+
+      <div id="composer">
+        <input id="draft" placeholder="Message..." disabled />
+        <button id="send" disabled>Send</button>
+      </div>
+    </main>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+      const channelsEl = document.getElementById("channels");
+      const messagesEl = document.getElementById("messages");
+      const channelTitleEl = document.getElementById("channelTitle");
+      const meEl = document.getElementById("me");
+      const draftEl = document.getElementById("draft");
+      const sendBtn = document.getElementById("send");
+
+      let activeChannelId = null;
+
+      const socket = io({ withCredentials: true });
+
+      socket.on("connect", () => {
+        console.log("socket connected");
+      });
+
+      socket.on("connect_error", (err) => {
+        console.log("socket connect_error:", err.message);
+      });
+
+      socket.on("message:new", (payload) => {
+        // only display messages for current channel
+        if (Number(payload.channelId) !== Number(activeChannelId)) return;
+        renderMessage(payload.message);
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+      });
+
+      function escapeHtml(s) {
+        return String(s).replace(/[&<>"']/g, c => ({
+          "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
+        }[c]));
+      }
+
+      function renderMessage(m) {
+        const div = document.createElement("div");
+        div.className = "msg";
+        div.innerHTML =
+          `<b>${escapeHtml(m.username)}</b>` +
+          `<span class="meta">${new Date(m.created_at).toLocaleString()}</span>` +
+          `<div>${escapeHtml(m.content)}</div>`;
+        messagesEl.appendChild(div);
+      }
+
+      async function requireMe() {
+        const res = await fetch("/auth/me", { credentials: "include" });
+        if (!res.ok) {
+          location.href = "/login.html";
+          return;
+        }
+        const data = await res.json();
+        meEl.innerHTML = `<b>Logged in:</b> ${escapeHtml(data.user.username)}`;
+      }
+
+      async function loadChannels() {
+channelsEl.innerHTML = "";
+
+data.channels.forEach((ch) => {
+  const row = document.createElement("div");
+  row.className = "chanRow";
+
+  const chanBtn = document.createElement("button");
+  chanBtn.className = "chanBtn";
+  chanBtn.textContent = "# " + ch.name;
+  chanBtn.dataset.id = ch.id;
+  chanBtn.onclick = () => openChannel(ch.id, ch.name);
+
+  const delBtn = document.createElement("button");
+  delBtn.className = "delBtn";
+  delBtn.textContent = "🗑";
+  delBtn.title = "Delete channel";
+
+  delBtn.onclick = async (e) => {
+    e.stopPropagation();
+
+    if (!confirm(`Delete #${ch.name}? This will delete all messages in it.`)) return;
+
+    const res = await fetch(`/channels/${ch.id}`, {
+      method: "DELETE",
+      credentials: "include",
+    });
+
+    const dataText = await res.text();
+    let out;
+    try { out = JSON.parse(dataText); } catch { out = { error: dataText }; }
+
+    if (!res.ok) {
+      channelErrorEl.textContent = out.error || "Failed to delete channel";
+      return;
+    }
+
+    // If we deleted the active channel, clear messages + title
+    if (Number(activeChannelId) === Number(ch.id)) {
+      activeChannelId = null;
+      channelTitleEl.textContent = "Pick a channel";
+      messagesEl.innerHTML = "";
+      draftEl.disabled = true;
+      sendBtn.disabled = true;
+    }
+
+    await loadChannels();
+
+    // Auto-open first channel if none active
+    if (!activeChannelId) {
+      const first = document.querySelector(".chanBtn");
+      if (first) first.click();
+    }
+  };
+
+  row.appendChild(chanBtn);
+  row.appendChild(delBtn);
+  channelsEl.appendChild(row);
+});
+
+      }
+
+      async function openChannel(id, name) {
+        activeChannelId = Number(id);
+        channelTitleEl.textContent = "# " + name;
+
+        document.querySelectorAll(".chan").forEach((b) => {
+          b.classList.toggle("active", Number(b.dataset.id) === activeChannelId);
+        });
+
+        messagesEl.innerHTML = "";
+
+        // join socket room for this channel
+        socket.emit("channel:join", { channelId: activeChannelId });
+
+        // enable composer
+        draftEl.disabled = false;
+        sendBtn.disabled = false;
+        draftEl.focus();
+
+        // load history
+        const res = await fetch(`/channels/${id}/messages?limit=50`, {
+          credentials: "include",
+        });
+
+        if (!res.ok) {
+          messagesEl.innerHTML = "<i>Failed to load messages</i>";
+          return;
+        }
+
+        const data = await res.json();
+        data.messages.forEach(renderMessage);
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+      }
+
+      function sendMessage() {
+        const text = draftEl.value;
+        if (!activeChannelId) return;
+        if (!text.trim()) return;
+
+        socket.emit("message:send", {
+          channelId: activeChannelId,
+          content: text
+        });
+
+        draftEl.value = "";
+        draftEl.focus();
+      }
+
+      sendBtn.onclick = sendMessage;
+      draftEl.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") sendMessage();
+      });
+
+      document.getElementById("logout").onclick = async () => {
+        await fetch("/auth/logout", { method: "POST", credentials: "include" });
+        location.href = "/login.html";
+      };
+
+      (async () => {
+        await requireMe();
+        await loadChannels();
+        const first = document.querySelector(".chan");
+        if (first) first.click();
+      })();
+
+      const addChannelBtn = document.getElementById("addChannel");
+const channelErrorEl = document.getElementById("channelError");
+
+addChannelBtn.onclick = async () => {
+  channelErrorEl.textContent = "";
+
+  const name = prompt("New channel name (e.g. gaming, general-chat):");
+  if (name === null) return; // user canceled
+
+  const res = await fetch("/channels", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ name })
+  });
+
+  const dataText = await res.text();
+  let data;
+  try { data = JSON.parse(dataText); } catch { data = { error: dataText }; }
+
+  if (!res.ok) {
+    channelErrorEl.textContent = data.error || "Failed to create channel";
+    return;
+  }
+
+  // Refresh channel list and auto-open the new one
+  await loadChannels();
+  if (data.channel?.id) {
+    openChannel(data.channel.id, data.channel.name);
+  }
+};
+    </script>
+  </body>
+</html>

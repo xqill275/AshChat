@@ -40,27 +40,6 @@ router.post("/", auth, async (req, res) => {
   }
 });
 
-router.delete("/:id", auth, async (req, res) => {
-  const channelId = Number(req.params.id);
-  if (!Number.isFinite(channelId)) return res.status(400).json({ error: "Invalid channel id" });
-
-  const conn = await db.getConnection();
-  try {
-    await conn.beginTransaction();
-    await conn.execute("DELETE FROM messages WHERE channel_id = ?", [channelId]);
-    const [result] = await conn.execute("DELETE FROM channels WHERE id = ?", [channelId]);
-    await conn.commit();
-
-    if (result.affectedRows === 0) return res.status(404).json({ error: "Channel not found" });
-    res.json({ ok: true });
-  } catch (e) {
-    await conn.rollback();
-    res.status(500).json({ error: "Failed to delete channel" });
-  } finally {
-    conn.release();
-  }
-});
-
 // Chat history for a channel
 router.get("/:id/messages", auth, async (req, res) => {
   const channelId = Number(req.params.id);
