@@ -8,9 +8,6 @@
       #main { flex:1; display:flex; flex-direction:column; }
       #topbar { padding:12px; border-bottom:1px solid #ddd; }
       #messages { flex:1; overflow:auto; padding:12px; }
-      #composer { display:flex; gap:8px; padding:12px; border-top:1px solid #ddd; }
-      input, button { padding:10px; }
-      input { flex:1; }
       .chan { width:100%; text-align:left; padding:8px; margin-top:6px; border:1px solid #ddd; background:white; cursor:pointer; }
       .chan.active { background:#eee; }
       .msg { margin-bottom:10px; }
@@ -33,40 +30,15 @@
       </div>
 
       <div id="messages"></div>
-
-      <div id="composer">
-        <input id="draft" placeholder="Message..." disabled />
-        <button id="send" disabled>Send</button>
-      </div>
     </main>
 
-    <script src="/socket.io/socket.io.js"></script>
     <script>
       const channelsEl = document.getElementById("channels");
       const messagesEl = document.getElementById("messages");
       const channelTitleEl = document.getElementById("channelTitle");
       const meEl = document.getElementById("me");
-      const draftEl = document.getElementById("draft");
-      const sendBtn = document.getElementById("send");
 
       let activeChannelId = null;
-
-      const socket = io({ withCredentials: true });
-
-      socket.on("connect", () => {
-        console.log("socket connected");
-      });
-
-      socket.on("connect_error", (err) => {
-        console.log("socket connect_error:", err.message);
-      });
-
-      socket.on("message:new", (payload) => {
-        // only display messages for current channel
-        if (Number(payload.channelId) !== Number(activeChannelId)) return;
-        renderMessage(payload.message);
-        messagesEl.scrollTop = messagesEl.scrollHeight;
-      });
 
       function escapeHtml(s) {
         return String(s).replace(/[&<>"']/g, c => ({
@@ -106,7 +78,9 @@
           btn.className = "chan";
           btn.textContent = "# " + ch.name;
           btn.dataset.id = ch.id;
+
           btn.onclick = () => openChannel(ch.id, ch.name);
+
           channelsEl.appendChild(btn);
         });
       }
@@ -121,15 +95,6 @@
 
         messagesEl.innerHTML = "";
 
-        // join socket room for this channel
-        socket.emit("channel:join", { channelId: activeChannelId });
-
-        // enable composer
-        draftEl.disabled = false;
-        sendBtn.disabled = false;
-        draftEl.focus();
-
-        // load history
         const res = await fetch(`/channels/${id}/messages?limit=50`, {
           credentials: "include",
         });
@@ -141,27 +106,9 @@
 
         const data = await res.json();
         data.messages.forEach(renderMessage);
+
         messagesEl.scrollTop = messagesEl.scrollHeight;
       }
-
-      function sendMessage() {
-        const text = draftEl.value;
-        if (!activeChannelId) return;
-        if (!text.trim()) return;
-
-        socket.emit("message:send", {
-          channelId: activeChannelId,
-          content: text
-        });
-
-        draftEl.value = "";
-        draftEl.focus();
-      }
-
-      sendBtn.onclick = sendMessage;
-      draftEl.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") sendMessage();
-      });
 
       document.getElementById("logout").onclick = async () => {
         await fetch("/auth/logout", { method: "POST", credentials: "include" });
@@ -171,6 +118,8 @@
       (async () => {
         await requireMe();
         await loadChannels();
+
+        // auto-open first channel if exists
         const first = document.querySelector(".chan");
         if (first) first.click();
       })();
