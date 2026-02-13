@@ -1,32 +1,34 @@
 <!doctype html>
-<html>
+<html lang="en">
   <head>
+    <meta charset="utf-8" />
     <title>App</title>
-    <link rel="stylesheet" href="css/app.css" />
+
+    <link rel="stylesheet" href="/css/app.css" />
   </head>
   <body>
     <aside id="sidebar">
-      <div id="me" style="margin-bottom:12px;"></div>
+      <div id="me"></div>
 
-      <button id="logout" style="width:100%; padding:10px;">Logout</button>
+      <button id="logout">Logout</button>
 
-      <div style="display:flex; align-items:center; justify-content:space-between; margin:16px 0 8px;">
-        <h3 style="margin:0;">Channels</h3>
-        <button id="addChannel" title="Add channel" style="padding:6px 10px;">+</button>
+      <div id="channelsHeader">
+        <h3>Channels</h3>
+        <button id="addChannel" title="Add channel">+</button>
       </div>
 
       <div id="channels"></div>
-      <pre id="channelError" style="color:#b00; white-space:pre-wrap;"></pre>
+      <pre id="channelError"></pre>
     </aside>
 
     <main id="main">
       <div id="topbar">
         <b id="channelTitle">Pick a channel</b>
-        <span id="channelType" style="opacity:0.7;"></span>
+        <span id="channelType"></span>
 
-        <button id="joinVoice" style="margin-left:auto;" disabled>Join Voice</button>
+        <button id="joinVoice" disabled>Join Voice</button>
         <button id="leaveVoice" disabled>Leave Voice</button>
-        <span id="voiceStatus" style="opacity:0.7;"></span>
+        <span id="voiceStatus"></span>
       </div>
 
       <div id="messages"></div>
@@ -44,13 +46,13 @@
 
     <!-- Add Channel modal -->
     <div id="modalBackdrop">
-      <div id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-        <h3 id="modalTitle">Create Channel</h3>
+      <div id="modal" role="dialog" aria-modal="true">
+        <h3>Create Channel</h3>
 
-        <label for="newChannelName">Channel name</label>
-        <input id="newChannelName" placeholder="e.g. general, gaming" />
+        <label>Channel name</label>
+        <input id="newChannelName" />
 
-        <label for="newChannelType">Channel type</label>
+        <label>Channel type</label>
         <select id="newChannelType">
           <option value="TEXT">Text</option>
           <option value="VOICE">Voice</option>
@@ -66,6 +68,6 @@
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
-    <script type="module" src="js/main.js"></script>
+    <script src="/js/app.js"></script>
   </body>
 </html>

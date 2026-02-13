@@ -13,7 +13,7 @@ const router = express.Router();
 /*********************************
  * Config
  *********************************/
-const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_SECRET = process.env.JWT_SECRET || "change_me_dev_secret";
 const TOKEN_MAX_AGE = 60480000; // 7 days
 
 /*********************************

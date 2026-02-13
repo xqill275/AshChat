@@ -1,0 +1,136 @@
+<!doctype html>
+<html>
+  <head>
+    <title>App</title>
+    <style>
+      body { margin:0; font-family:system-ui; height:100vh; display:flex; }
+      #sidebar { width:260px; border-right:1px solid #ddd; padding:12px; box-sizing:border-box; overflow:auto; }
+      #main { flex:1; display:flex; flex-direction:column; }
+      #topbar { padding:12px; border-bottom:1px solid #ddd; display:flex; align-items:center; gap:10px; }
+      #messages { flex:1; overflow:auto; padding:12px; }
+      #composer { display:flex; gap:8px; padding:12px; border-top:1px solid #ddd; }
+      input, button, select { padding:10px; }
+      input { flex:1; }
+
+      .chan { width:100%; text-align:left; padding:8px; margin-top:6px; border:1px solid #ddd; background:white; cursor:pointer; }
+      .chan.active { background:#eee; }
+
+      .msg { margin-bottom:10px; }
+      .meta { opacity:0.6; font-size:12px; margin-left:6px; }
+
+      .sectionHeader { margin-top: 10px; opacity: 0.75; font-size: 13px; }
+
+      /* Right-click context menu */
+      #ctxMenu {
+        position: fixed;
+        display: none;
+        min-width: 160px;
+        border: 1px solid #ccc;
+        background: white;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+        padding: 6px;
+        z-index: 9999;
+      }
+      #ctxMenu button {
+        width: 100%;
+        text-align: left;
+        padding: 8px;
+        border: none;
+        background: transparent;
+        cursor: pointer;
+      }
+      #ctxMenu button:hover { background: #eee; }
+      #ctxMenu .danger { color: #b00020; }
+      #ctxMenu .danger:hover { background: #ffe9ec; }
+
+      /* Add Channel modal */
+      #modalBackdrop {
+        position: fixed;
+        inset: 0;
+        display: none;
+        background: rgba(0,0,0,0.35);
+        z-index: 10000;
+      }
+      #modal {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 340px;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 14px;
+        box-shadow: 0 12px 40px rgba(0,0,0,0.2);
+      }
+      #modal h3 { margin: 0 0 10px; }
+      #modal label { display:block; font-size: 13px; opacity:0.8; margin-top: 10px; }
+      #modal input, #modal select { width: 100%; box-sizing: border-box; margin-top: 6px; }
+      #modalActions { display:flex; gap:8px; margin-top: 14px; justify-content:flex-end; }
+      #modalError { color:#b00; white-space:pre-wrap; margin-top: 10px; min-height: 18px; }
+    </style>
+  </head>
+  <body>
+    <aside id="sidebar">
+      <div id="me" style="margin-bottom:12px;"></div>
+
+      <button id="logout" style="width:100%; padding:10px;">Logout</button>
+
+      <div style="display:flex; align-items:center; justify-content:space-between; margin:16px 0 8px;">
+        <h3 style="margin:0;">Channels</h3>
+        <button id="addChannel" title="Add channel" style="padding:6px 10px;">+</button>
+      </div>
+
+      <div id="channels"></div>
+      <pre id="channelError" style="color:#b00; white-space:pre-wrap;"></pre>
+    </aside>
+
+    <main id="main">
+      <div id="topbar">
+        <b id="channelTitle">Pick a channel</b>
+        <span id="channelType" style="opacity:0.7;"></span>
+
+        <button id="joinVoice" style="margin-left:auto;" disabled>Join Voice</button>
+        <button id="leaveVoice" disabled>Leave Voice</button>
+        <span id="voiceStatus" style="opacity:0.7;"></span>
+      </div>
+
+      <div id="messages"></div>
+
+      <div id="composer">
+        <input id="draft" placeholder="Message..." disabled />
+        <button id="send" disabled>Send</button>
+      </div>
+    </main>
+
+    <!-- Context menu -->
+    <div id="ctxMenu">
+      <button id="ctxDelete" class="danger">Delete</button>
+    </div>
+
+    <!-- Add Channel modal -->
+    <div id="modalBackdrop">
+      <div id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <h3 id="modalTitle">Create Channel</h3>
+
+        <label for="newChannelName">Channel name</label>
+        <input id="newChannelName" placeholder="e.g. general, gaming" />
+
+        <label for="newChannelType">Channel type</label>
+        <select id="newChannelType">
+          <option value="TEXT">Text</option>
+          <option value="VOICE">Voice</option>
+        </select>
+
+        <div id="modalError"></div>
+
+        <div id="modalActions">
+          <button id="cancelCreate">Cancel</button>
+          <button id="createChannelBtn">Create</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+  </body>
+</html>

@@ -107,7 +107,7 @@ io.use((socket, next) => {
  * Socket Events
  *********************************/
 io.on("connection", (socket) => {
-  /******** Channel Chat ********/
+  // Channel Chat ********/
   socket.on("channel:join", ({ channelId }) => {
     socket.join(`channel:${channelId}`);
   });
@@ -139,7 +139,7 @@ io.on("connection", (socket) => {
     });
   });
 
-  /******** Voice Chat ********/
+  // Voice Chat
   socket.on("voice:join", ({ channelId }) => {
     const room = getVoiceRoom(channelId);
     room.add(socket.id);
@@ -183,7 +183,7 @@ io.on("connection", (socket) => {
     leaveAllVoiceRooms(socket);
   });
 
-  /******** WebRTC Signaling ********/
+  // WebRTC Signaling
   socket.on("webrtc:offer", ({ to, channelId, sdp }) => {
     io.to(to).emit("webrtc:offer", {
       from: socket.id,
@@ -209,9 +209,9 @@ io.on("connection", (socket) => {
   });
 });
 
-/*********************************
- * Start Server
- *********************************/
+
+ // Start Server
+
 server.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
 });

@@ -24,17 +24,14 @@ const server = http.createServer(app);
 const PORT = process.env.PORT || 3001;
 const JWT_SECRET = process.env.JWT_SECRET || "change_me_dev_secret";
 
-/*********************************
- * Middleware
- *********************************/
+//Middleware
+
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "public")));
 
-/*********************************
- * Routes
- *********************************/
+// Routes
 app.use("/auth", authRoutes);
 app.use("/channels", channelRoutes);
 
@@ -42,16 +39,15 @@ app.get("/", (_req, res) => {
   res.redirect("/register.html");
 });
 
-/*********************************
- * Socket.IO
- *********************************/
+ 
+// Socket.IO
+
 const io = new Server(server, {
   cors: { origin: true, credentials: true },
 });
 
-/*********************************
- * Voice Room State
- *********************************/
+//Voice Room State
+
 const voiceRooms = new Map();
 
 function getVoiceRoom(channelId) {
@@ -78,9 +74,9 @@ function leaveAllVoiceRooms(socket) {
   }
 }
 
-/*********************************
- * Socket Auth (JWT from cookie)
- *********************************/
+
+ //Socket Auth (JWT from cookie)
+
 io.use((socket, next) => {
   const cookieHeader = socket.handshake.headers.cookie ?? "";
 
@@ -103,11 +99,11 @@ io.use((socket, next) => {
   }
 });
 
-/*********************************
- * Socket Events
- *********************************/
+
+ // Socket Events
+
 io.on("connection", (socket) => {
-  /******** Channel Chat ********/
+  // Channel Chat 
   socket.on("channel:join", ({ channelId }) => {
     socket.join(`channel:${channelId}`);
   });
@@ -139,7 +135,7 @@ io.on("connection", (socket) => {
     });
   });
 
-  /******** Voice Chat ********/
+  // Voice Chat
   socket.on("voice:join", ({ channelId }) => {
     const room = getVoiceRoom(channelId);
     room.add(socket.id);
@@ -183,7 +179,7 @@ io.on("connection", (socket) => {
     leaveAllVoiceRooms(socket);
   });
 
-  /******** WebRTC Signaling ********/
+  // WebRTC Signaling
   socket.on("webrtc:offer", ({ to, channelId, sdp }) => {
     io.to(to).emit("webrtc:offer", {
       from: socket.id,
@@ -209,9 +205,9 @@ io.on("connection", (socket) => {
   });
 });
 
-/*********************************
- * Start Server
- *********************************/
+
+ // Start Server
+
 server.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
 });

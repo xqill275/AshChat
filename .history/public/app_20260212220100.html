@@ -1,0 +1,638 @@
+<!doctype html>
+<html>
+  <head>
+    <title>App</title>
+    <style>
+      body { margin:0; font-family:system-ui; height:100vh; display:flex; }
+      #sidebar { width:260px; border-right:1px solid #ddd; padding:12px; box-sizing:border-box; overflow:auto; }
+      #main { flex:1; display:flex; flex-direction:column; }
+      #topbar { padding:12px; border-bottom:1px solid #ddd; display:flex; align-items:center; gap:10px; }
+      #messages { flex:1; overflow:auto; padding:12px; }
+      #composer { display:flex; gap:8px; padding:12px; border-top:1px solid #ddd; }
+      input, button, select { padding:10px; }
+      input { flex:1; }
+
+      .chan { width:100%; text-align:left; padding:8px; margin-top:6px; border:1px solid #ddd; background:white; cursor:pointer; }
+      .chan.active { background:#eee; }
+
+      .msg { margin-bottom:10px; }
+      .meta { opacity:0.6; font-size:12px; margin-left:6px; }
+
+      .sectionHeader { margin-top: 10px; opacity: 0.75; font-size: 13px; }
+
+      /* Right-click context menu */
+      #ctxMenu {
+        position: fixed;
+        display: none;
+        min-width: 160px;
+        border: 1px solid #ccc;
+        background: rgb(0, 0, 0);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+        padding: 6px;
+        z-index: 9999;
+      }
+      #ctxMenu button {
+        width: 100%;
+        text-align: left;
+        padding: 8px;
+        border: none;
+        background: transparent;
+        cursor: pointer;
+      }
+      #ctxMenu button:hover { background: #eee; }
+      #ctxMenu .danger { color: #b00020; }
+      #ctxMenu .danger:hover { background: #ffe9ec; }
+
+      /* Add Channel modal */
+      #modalBackdrop {
+        position: fixed;
+        inset: 0;
+        display: none;
+        background: rgba(0,0,0,0.35);
+        z-index: 10000;
+      }
+      #modal {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 340px;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 14px;
+        box-shadow: 0 12px 40px rgba(0,0,0,0.2);
+      }
+      #modal h3 { margin: 0 0 10px; }
+      #modal label { display:block; font-size: 13px; opacity:0.8; margin-top: 10px; }
+      #modal input, #modal select { width: 100%; box-sizing: border-box; margin-top: 6px; }
+      #modalActions { display:flex; gap:8px; margin-top: 14px; justify-content:flex-end; }
+      #modalError { color:#b00; white-space:pre-wrap; margin-top: 10px; min-height: 18px; }
+    </style>
+  </head>
+  <body>
+    <aside id="sidebar">
+      <div id="me" style="margin-bottom:12px;"></div>
+
+      <button id="logout" style="width:100%; padding:10px;">Logout</button>
+
+      <div style="display:flex; align-items:center; justify-content:space-between; margin:16px 0 8px;">
+        <h3 style="margin:0;">Channels</h3>
+        <button id="addChannel" title="Add channel" style="padding:6px 10px;">+</button>
+      </div>
+
+      <div id="channels"></div>
+      <pre id="channelError" style="color:#b00; white-space:pre-wrap;"></pre>
+    </aside>
+
+    <main id="main">
+      <div id="topbar">
+        <b id="channelTitle">Pick a channel</b>
+        <span id="channelType" style="opacity:0.7;"></span>
+        <button id="joinVoice" style="margin-left:auto;" disabled>Join Voice</button>
+        <button id="leaveVoice" disabled>Leave Voice</button>
+        <span id="voiceStatus" style="opacity:0.7;"></span>
+      </div>
+
+      <div id="messages"></div>
+
+      <div id="composer">
+        <input id="draft" placeholder="Message..." disabled />
+        <button id="send" disabled>Send</button>
+      </div>
+    </main>
+
+    <!-- Context menu -->
+    <div id="ctxMenu">
+      <button id="ctxDelete" class="danger">Delete</button>
+    </div>
+
+    <!-- Add Channel modal -->
+    <div id="modalBackdrop">
+      <div id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <h3 id="modalTitle">Create Channel</h3>
+
+        <label for="newChannelName">Channel name</label>
+        <input id="newChannelName" placeholder="e.g. general, gaming" />
+
+        <label for="newChannelType">Channel type</label>
+        <select id="newChannelType">
+          <option value="TEXT">Text</option>
+          <option value="VOICE">Voice</option>
+        </select>
+
+        <div id="modalError"></div>
+
+        <div id="modalActions">
+          <button id="cancelCreate">Cancel</button>
+          <button id="createChannelBtn">Create</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+      const channelsEl = document.getElementById("channels");
+      const messagesEl = document.getElementById("messages");
+      const channelTitleEl = document.getElementById("channelTitle");
+      const channelTypeEl = document.getElementById("channelType");
+      const meEl = document.getElementById("me");
+      const draftEl = document.getElementById("draft");
+      const sendBtn = document.getElementById("send");
+      const joinVoiceBtn = document.getElementById("joinVoice");
+      const leaveVoiceBtn = document.getElementById("leaveVoice");
+      const voiceStatusEl = document.getElementById("voiceStatus");
+
+let inVoiceChannelId = null;
+let localStream = null;          // MediaStream from mic
+const peerPCs = new Map();       // socketId -> RTCPeerConnection
+
+      const addChannelBtn = document.getElementById("addChannel");
+      const channelErrorEl = document.getElementById("channelError");
+
+      // Context menu elements/state
+      const ctxMenu = document.getElementById("ctxMenu");
+      const ctxDelete = document.getElementById("ctxDelete");
+      let ctxChannel = null; // { id, name, type }
+
+      // Add Channel modal elements/state
+      const modalBackdrop = document.getElementById("modalBackdrop");
+      const newChannelNameEl = document.getElementById("newChannelName");
+      const newChannelTypeEl = document.getElementById("newChannelType");
+      const modalErrorEl = document.getElementById("modalError");
+      const cancelCreateBtn = document.getElementById("cancelCreate");
+      const createChannelBtn = document.getElementById("createChannelBtn");
+
+      let activeChannelId = null;
+      let activeChannelType = null; // "TEXT" | "VOICE"
+
+      const socket = io({ withCredentials: true });
+
+      socket.on("connect", () => console.log("socket connected"));
+      socket.on("connect_error", (err) => console.log("socket connect_error:", err.message));
+
+      socket.on("message:new", (payload) => {
+        if (Number(payload.channelId) !== Number(activeChannelId)) return;
+        if (activeChannelType !== "TEXT") return;
+        renderMessage(payload.message);
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+      });
+
+      function escapeHtml(s) {
+        return String(s).replace(/[&<>"']/g, c => ({
+          "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
+        }[c]));
+      }
+
+      function renderMessage(m) {
+        const div = document.createElement("div");
+        div.className = "msg";
+        div.innerHTML =
+          `<b>${escapeHtml(m.username)}</b>` +
+          `<span class="meta">${new Date(m.created_at).toLocaleString()}</span>` +
+          `<div>${escapeHtml(m.content)}</div>`;
+        messagesEl.appendChild(div);
+      }
+
+      async function requireMe() {
+        const res = await fetch("/auth/me", { credentials: "include" });
+        if (!res.ok) {
+          location.href = "/login.html";
+          return;
+        }
+        const data = await res.json();
+        meEl.innerHTML = `<b>Logged in:</b> ${escapeHtml(data.user.username)}`;
+      }
+
+      // ---- Context menu helpers ----
+      function hideCtxMenu() {
+        ctxMenu.style.display = "none";
+        ctxChannel = null;
+      }
+
+      function showCtxMenu(x, y, channel) {
+        ctxChannel = channel;
+
+        const menuW = 170;
+        const menuH = 60;
+        const px = Math.min(x, window.innerWidth - menuW - 8);
+        const py = Math.min(y, window.innerHeight - menuH - 8);
+
+        ctxMenu.style.left = px + "px";
+        ctxMenu.style.top = py + "px";
+        ctxMenu.style.display = "block";
+      }
+
+      document.addEventListener("click", () => hideCtxMenu());
+      document.addEventListener("keydown", (e) => { if (e.key === "Escape") { hideCtxMenu(); hideModal(); } });
+      window.addEventListener("resize", hideCtxMenu);
+      window.addEventListener("scroll", hideCtxMenu);
+
+      // ---- Modal helpers ----
+      function showModal() {
+        modalErrorEl.textContent = "";
+        newChannelNameEl.value = "";
+        newChannelTypeEl.value = "TEXT";
+        modalBackdrop.style.display = "block";
+        newChannelNameEl.focus();
+      }
+
+      function hideModal() {
+        modalBackdrop.style.display = "none";
+      }
+
+      // close modal if clicking backdrop (not the dialog)
+      modalBackdrop.addEventListener("click", (e) => {
+        if (e.target === modalBackdrop) hideModal();
+      });
+
+      cancelCreateBtn.onclick = hideModal;
+
+      // ---- Channels ----
+      async function loadChannels() {
+        const res = await fetch("/channels", { credentials: "include" });
+        if (!res.ok) return;
+
+        const data = await res.json();
+        channelsEl.innerHTML = "";
+
+        const textHeader = document.createElement("div");
+        textHeader.className = "sectionHeader";
+        textHeader.innerHTML = "<b>Text</b>";
+        channelsEl.appendChild(textHeader);
+
+        data.channels.filter(c => c.type === "TEXT").forEach((ch) => {
+          const btn = document.createElement("button");
+          btn.className = "chan";
+          btn.textContent = "# " + ch.name;
+          btn.dataset.id = ch.id;
+          btn.dataset.type = ch.type;
+
+          btn.onclick = () => openChannel(ch.id, ch.name, ch.type);
+
+          btn.addEventListener("contextmenu", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            showCtxMenu(e.clientX, e.clientY, { id: ch.id, name: ch.name, type: ch.type });
+          });
+
+          channelsEl.appendChild(btn);
+        });
+
+        const voiceHeader = document.createElement("div");
+        voiceHeader.className = "sectionHeader";
+        voiceHeader.innerHTML = "<b>Voice</b>";
+        voiceHeader.style.marginTop = "12px";
+        channelsEl.appendChild(voiceHeader);
+
+        data.channels.filter(c => c.type === "VOICE").forEach((ch) => {
+          const btn = document.createElement("button");
+          btn.className = "chan";
+          btn.textContent = "🔊 " + ch.name;
+          btn.dataset.id = ch.id;
+          btn.dataset.type = ch.type;
+
+          btn.onclick = () => openChannel(ch.id, ch.name, ch.type);
+
+          btn.addEventListener("contextmenu", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            showCtxMenu(e.clientX, e.clientY, { id: ch.id, name: ch.name, type: ch.type });
+          });
+
+          channelsEl.appendChild(btn);
+        });
+
+        if (activeChannelId !== null) {
+          document.querySelectorAll(".chan").forEach((b) => {
+            b.classList.toggle("active", Number(b.dataset.id) === Number(activeChannelId));
+          });
+        }
+      }
+
+      async function openChannel(id, name, type) {
+        activeChannelId = Number(id);
+        activeChannelType = type;
+
+        channelTitleEl.textContent = (type === "VOICE" ? "🔊 " : "# ") + name;
+        channelTypeEl.textContent = type === "VOICE" ? "(Voice)" : "(Text)";
+
+        document.querySelectorAll(".chan").forEach((b) => {
+          b.classList.toggle("active", Number(b.dataset.id) === activeChannelId);
+        });
+
+        messagesEl.innerHTML = "";
+
+        const isText = type === "TEXT";
+        draftEl.disabled = !isText;
+        sendBtn.disabled = !isText;
+
+        if (!isText) {
+          messagesEl.innerHTML = "<i>This is a voice channel. (WIP.)</i>";
+          return;
+        }
+
+        socket.emit("channel:join", { channelId: activeChannelId });
+
+        const res = await fetch(`/channels/${id}/messages?limit=50`, { credentials: "include" });
+        if (!res.ok) {
+          messagesEl.innerHTML = "<i>Failed to load messages</i>";
+          return;
+        }
+
+        const data = await res.json();
+        data.messages.forEach(renderMessage);
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+                if (type === "VOICE") {
+          joinVoiceBtn.disabled = !!inVoiceChannelId; // if already in voice, keep disabled
+        } else {
+          joinVoiceBtn.disabled = true;
+        }
+
+        // If user switches away from the voice channel they’re in, auto-leave (simple MVP)
+        if (inVoiceChannelId && String(activeChannelId) !== String(inVoiceChannelId)) {
+          // leave current voice room
+          socket.emit("voice:leave", { channelId: inVoiceChannelId });
+          closeAllPeers();
+          stopMic();
+          inVoiceChannelId = null;
+          leaveVoiceBtn.disabled = true;
+          setVoiceStatus("");
+        }
+      }
+
+      function sendMessage() {
+        const text = draftEl.value;
+        if (!activeChannelId) return;
+        if (activeChannelType !== "TEXT") return;
+        if (!text.trim()) return;
+
+        socket.emit("message:send", { channelId: activeChannelId, content: text });
+
+        draftEl.value = "";
+        draftEl.focus();
+      }
+
+      sendBtn.onclick = sendMessage;
+      draftEl.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") sendMessage();
+      });
+
+      document.getElementById("logout").onclick = async () => {
+        await fetch("/auth/logout", { method: "POST", credentials: "include" });
+        location.href = "/login.html";
+      };
+
+      // ---- Create channel (modal) ----
+      addChannelBtn.onclick = () => {
+        channelErrorEl.textContent = "";
+        showModal();
+      };
+
+      async function createChannel() {
+        modalErrorEl.textContent = "";
+
+        const name = newChannelNameEl.value;
+        const type = newChannelTypeEl.value; // "TEXT" or "VOICE"
+
+        const res = await fetch("/channels", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ name, type })
+        });
+
+        const txt = await res.text();
+        let data;
+        try { data = JSON.parse(txt); } catch { data = { error: txt }; }
+
+        if (!res.ok) {
+          modalErrorEl.textContent = data.error || "Failed to create channel";
+          return;
+        }
+
+        hideModal();
+        await loadChannels();
+        if (data.channel?.id) openChannel(data.channel.id, data.channel.name, data.channel.type);
+      }
+
+      createChannelBtn.onclick = createChannel;
+      newChannelNameEl.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") createChannel();
+      });
+
+      // ---- Delete (context menu) ----
+      ctxDelete.onclick = async (e) => {
+        e.stopPropagation();
+        if (!ctxChannel) return;
+
+        const id = ctxChannel.id;
+        const name = ctxChannel.name;
+
+        if (!confirm(`Delete ${ctxChannel.type === "VOICE" ? "🔊 " : "# "}${name}? This deletes all messages in it.`)) {
+          hideCtxMenu();
+          return;
+        }
+
+        const res = await fetch(`/channels/${id}`, { method: "DELETE", credentials: "include" });
+
+        const txt = await res.text();
+        let data;
+        try { data = JSON.parse(txt); } catch { data = { error: txt }; }
+
+        hideCtxMenu();
+
+        if (!res.ok) {
+          alert(data.error || "Failed to delete channel");
+          return;
+        }
+
+        if (Number(activeChannelId) === Number(id)) {
+          activeChannelId = null;
+          activeChannelType = null;
+          channelTitleEl.textContent = "Pick a channel";
+          channelTypeEl.textContent = "";
+          messagesEl.innerHTML = "";
+          draftEl.disabled = true;
+          sendBtn.disabled = true;
+        }
+
+        await loadChannels();
+
+        if (!activeChannelId) {
+          const firstText = Array.from(document.querySelectorAll(".chan")).find((b) => b.dataset.type === "TEXT");
+          const firstAny = document.querySelector(".chan");
+          if (firstText) firstText.click();
+          else if (firstAny) firstAny.click();
+        }
+      };
+
+      (async () => {
+        await requireMe();
+        await loadChannels();
+
+        const firstText = Array.from(document.querySelectorAll(".chan")).find((b) => b.dataset.type === "TEXT");
+        const firstAny = document.querySelector(".chan");
+        if (firstText) firstText.click();
+        else if (firstAny) firstAny.click();
+      })();
+
+
+      function setVoiceStatus(t) { voiceStatusEl.textContent = t || ""; }
+
+      async function startMic() {
+        localStream = await navigator.mediaDevices.getUserMedia({
+          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+          video: false,
+        });
+      }
+
+      function stopMic() {
+        if (!localStream) return;
+        localStream.getTracks().forEach(t => t.stop());
+        localStream = null;
+      }
+
+      function removeRemoteAudio(peerSocketId) {
+        const el = document.getElementById("a_" + peerSocketId);
+        if (el) el.remove();
+      }
+
+      function closePeer(peerSocketId) {
+        const pc = peerPCs.get(peerSocketId);
+        if (pc) {
+          try { pc.close(); } catch {}
+          peerPCs.delete(peerSocketId);
+        }
+        removeRemoteAudio(peerSocketId);
+      }
+
+      function closeAllPeers() {
+        for (const sid of Array.from(peerPCs.keys())) closePeer(sid);
+      }
+
+      function makePC(peerSocketId) {
+        const pc = new RTCPeerConnection({
+          iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+        });
+
+        pc.onicecandidate = (e) => {
+          if (e.candidate && inVoiceChannelId) {
+            socket.emit("webrtc:ice", { to: peerSocketId, channelId: inVoiceChannelId, candidate: e.candidate });
+          }
+        };
+
+        pc.ontrack = (e) => {
+          const stream = e.streams[0];
+          let audio = document.getElementById("a_" + peerSocketId);
+          if (!audio) {
+            audio = document.createElement("audio");
+            audio.id = "a_" + peerSocketId;
+            audio.autoplay = true;
+            audio.playsInline = true;
+            document.body.appendChild(audio);
+          }
+          audio.srcObject = stream;
+        };
+
+        // add our mic tracks
+        if (localStream) {
+          for (const track of localStream.getTracks()) {
+            pc.addTrack(track, localStream);
+          }
+        }
+
+        return pc;
+      }
+
+      socket.on("voice:peers", async ({ channelId, peers }) => {
+  // When we join, we get existing peers — we create offers to them
+        for (const p of peers) {
+          const peerSocketId = p.socketId;
+          if (peerPCs.has(peerSocketId)) continue;
+
+          const pc = makePC(peerSocketId);
+          peerPCs.set(peerSocketId, pc);
+
+          const offer = await pc.createOffer();
+          await pc.setLocalDescription(offer);
+
+          socket.emit("webrtc:offer", { to: peerSocketId, channelId, sdp: offer });
+        }
+      });
+
+      socket.on("voice:user_left", ({ channelId, socketId }) => {
+        if (String(channelId) !== String(inVoiceChannelId)) return;
+        closePeer(socketId);
+      });
+
+      socket.on("webrtc:offer", async ({ from, channelId, sdp }) => {
+        if (String(channelId) !== String(inVoiceChannelId)) return;
+
+        let pc = peerPCs.get(from);
+        if (!pc) {
+          pc = makePC(from);
+          peerPCs.set(from, pc);
+        }
+
+        await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+
+        socket.emit("webrtc:answer", { to: from, channelId, sdp: answer });
+      });
+
+      socket.on("webrtc:answer", async ({ from, channelId, sdp }) => {
+        if (String(channelId) !== String(inVoiceChannelId)) return;
+        const pc = peerPCs.get(from);
+        if (!pc) return;
+        await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+      });
+
+      socket.on("webrtc:ice", async ({ from, channelId, candidate }) => {
+        if (String(channelId) !== String(inVoiceChannelId)) return;
+        const pc = peerPCs.get(from);
+        if (!pc) return;
+        try {
+          await pc.addIceCandidate(new RTCIceCandidate(candidate));
+        } catch (e) {
+          console.log("ICE add failed:", e);
+        }
+      });
+
+      joinVoiceBtn.onclick = async () => {
+  if (activeChannelType !== "VOICE") return;
+  if (inVoiceChannelId) return;
+
+  try {
+    await startMic();
+  } catch {
+    alert("Mic permission denied (or no mic).");
+    return;
+  }
+
+  inVoiceChannelId = String(activeChannelId);
+  socket.emit("voice:join", { channelId: inVoiceChannelId });
+
+  joinVoiceBtn.disabled = true;
+  leaveVoiceBtn.disabled = false;
+  setVoiceStatus("Connected (voice)");
+};
+
+leaveVoiceBtn.onclick = async () => {
+  if (!inVoiceChannelId) return;
+
+  socket.emit("voice:leave", { channelId: inVoiceChannelId });
+
+  closeAllPeers();
+  stopMic();
+
+  inVoiceChannelId = null;
+  joinVoiceBtn.disabled = (activeChannelType !== "VOICE");
+  leaveVoiceBtn.disabled = true;
+  setVoiceStatus("");
+};
+
+    </script>
+  </body>
+</html>

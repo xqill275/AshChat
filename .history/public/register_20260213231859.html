@@ -2,14 +2,18 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Login</title>
+    <title>Register</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="stylesheet" href="css/login.css" />
   </head>
 
   <body>
     <div class="card">
-      <h2>Login</h2>
+      <h2>Register</h2>
+
+      <div class="field">
+        <input id="username" placeholder="Username" />
+      </div>
 
       <div class="field">
         <input id="email" placeholder="Email" />
@@ -20,8 +24,8 @@
       </div>
 
       <div class="actions">
-        <button id="btn">Login</button>
-        <button id="reg">Go to Register</button>
+        <button id="btn">Create Account</button>
+        <button id="login">Go to Login</button>
       </div>
 
       <pre id="out"></pre>
@@ -29,11 +33,12 @@
 
     <script>
       document.getElementById("btn").onclick = async () => {
-        const res = await fetch("/auth/login", {
+        const res = await fetch("/auth/register", {
           method: "POST",
           headers: { "content-type": "application/json" },
           credentials: "include",
           body: JSON.stringify({
+            username: username.value,
             email: email.value,
             password: password.value
           })
@@ -43,8 +48,8 @@
         if (res.ok) location.href = "/app.html";
       };
 
-      document.getElementById("reg").onclick = () => {
-        location.href = "/register.html";
+      document.getElementById("login").onclick = () => {
+        location.href = "/login.html";
       };
     </script>
   </body>
