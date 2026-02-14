@@ -16,7 +16,6 @@ export function initModal() {
   addChannelBtn.onclick = showModal;
   cancelCreateBtn.onclick = hideModal;
   createChannelBtn.onclick = createChannel;
-  logoutBtn.onclick = logout;
 
   modalBackdrop.addEventListener("click", e => {
     if (e.target === modalBackdrop) hideModal();
@@ -61,11 +60,3 @@ async function createChannel() {
   hideModal();
   await loadChannels();
 }
-
-function logout() {
-  fetch("/auth/logout", {
-    method: "POST",
-    credentials: "include"
-  }).then(() => {
-    location.href = "/login.html";
-  })}

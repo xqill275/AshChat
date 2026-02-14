@@ -15,5 +15,3 @@ socket.on("message:new", payload => {
   renderMessage(payload.message);
   messagesEl.scrollTop = messagesEl.scrollHeight;
 });
-
-

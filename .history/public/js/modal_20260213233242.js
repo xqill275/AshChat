@@ -68,4 +68,4 @@ function logout() {
     credentials: "include"
   }).then(() => {
     location.href = "/login.html";
-  })}
+  });

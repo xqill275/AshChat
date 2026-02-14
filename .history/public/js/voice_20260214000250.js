@@ -122,8 +122,6 @@ function createPeerConnection(socketId) {
 
 socket.on("voice:peers", async ({ peers }) => {
   for (const peer of peers) {
-    if (socket.id > peer.socketId) continue;
-
     const pc = createPeerConnection(peer.socketId);
 
     const offer = await pc.createOffer();

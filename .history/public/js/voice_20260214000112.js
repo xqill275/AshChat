@@ -122,8 +122,6 @@ function createPeerConnection(socketId) {
 
 socket.on("voice:peers", async ({ peers }) => {
   for (const peer of peers) {
-    if (socket.id > peer.socketId) continue;
-
     const pc = createPeerConnection(peer.socketId);
 
     const offer = await pc.createOffer();
@@ -138,10 +136,10 @@ socket.on("voice:peers", async ({ peers }) => {
 });
 
 socket.on("voice:user_joined", async ({ socketId }) => {
-  // Only create offer if *we* are lexicographically smaller
-  if (socket.id > socketId) return;
-
-  const pc = createPeerConnection(socketId);
+    let pc = peerPCs.get(socketId);
+    if (!pc) {
+    pc = createPeerConnection(socketId);
+    }
 
   const offer = await pc.createOffer();
   await pc.setLocalDescription(offer);

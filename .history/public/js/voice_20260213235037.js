@@ -6,12 +6,11 @@ import {
 } from "./dom.js";
 
 import {
-  activeChannelId,
   inVoiceChannelId,
   setVoiceChannel,
   peerPCs,
-  pendingIce
-} from "./state.js";;
+  localStream
+} from "./state.js";
 
 import { socket } from "./socket.js";
 
@@ -36,36 +35,27 @@ async function startMic() {
 }
 
 function stopMic() {
-  if (!window.localStream) return;
-  window.localStream.getTracks().forEach(t => t.stop());
-  window.localStream = null;
+  if (!localStream) return;
+  localStream.getTracks().forEach(t => t.stop());
 }
 
 export async function joinVoice() {
   if (inVoiceChannelId) return;
-  if (!activeChannelId) return;
 
-  let stream;
   try {
-    stream = await startMic();
+    window.localStream = await startMic();
   } catch {
     alert("Mic permission denied");
     return;
   }
 
-  window.localStream = stream;
-
-  setVoiceChannel(String(activeChannelId));
-
-  socket.emit("voice:join", {
-    channelId: activeChannelId
-  });
+  setVoiceChannel(String(window.activeChannelId));
+  socket.emit("voice:join", { channelId: inVoiceChannelId });
 
   joinVoiceBtn.disabled = true;
   leaveVoiceBtn.disabled = false;
   setVoiceStatus("Connected (voice)");
 }
-
 
 export function leaveVoiceInternal() {
   if (!inVoiceChannelId) return;
@@ -122,8 +112,6 @@ function createPeerConnection(socketId) {
 
 socket.on("voice:peers", async ({ peers }) => {
   for (const peer of peers) {
-    if (socket.id > peer.socketId) continue;
-
     const pc = createPeerConnection(peer.socketId);
 
     const offer = await pc.createOffer();
@@ -138,9 +126,6 @@ socket.on("voice:peers", async ({ peers }) => {
 });
 
 socket.on("voice:user_joined", async ({ socketId }) => {
-  // Only create offer if *we* are lexicographically smaller
-  if (socket.id > socketId) return;
-
   const pc = createPeerConnection(socketId);
 
   const offer = await pc.createOffer();
@@ -154,13 +139,9 @@ socket.on("voice:user_joined", async ({ socketId }) => {
 });
 
 socket.on("webrtc:offer", async ({ from, sdp }) => {
-  let pc = peerPCs.get(from);
-  if (!pc) {
-    pc = createPeerConnection(from);
-  }
+  const pc = createPeerConnection(from);
 
   await pc.setRemoteDescription(new RTCSessionDescription(sdp));
-  flushPendingIce(from, pc);
 
   const answer = await pc.createAnswer();
   await pc.setLocalDescription(answer);
@@ -172,35 +153,19 @@ socket.on("webrtc:offer", async ({ from, sdp }) => {
   });
 });
 
-
 socket.on("webrtc:answer", async ({ from, sdp }) => {
   const pc = peerPCs.get(from);
   if (!pc) return;
 
   await pc.setRemoteDescription(new RTCSessionDescription(sdp));
-  flushPendingIce(from, pc);
 });
-
 
 socket.on("webrtc:ice", async ({ from, candidate }) => {
   const pc = peerPCs.get(from);
   if (!pc) return;
 
-  if (!pc.remoteDescription) {
-    if (!pendingIce.has(from)) {
-      pendingIce.set(from, []);
-    }
-    pendingIce.get(from).push(candidate);
-    return;
-  }
-
-  try {
-    await pc.addIceCandidate(new RTCIceCandidate(candidate));
-  } catch (err) {
-    console.error("ICE add error:", err);
-  }
+  await pc.addIceCandidate(new RTCIceCandidate(candidate));
 });
-
 
 socket.on("voice:user_left", ({ socketId }) => {
   const pc = peerPCs.get(socketId);
@@ -209,18 +174,6 @@ socket.on("voice:user_left", ({ socketId }) => {
     peerPCs.delete(socketId);
   }
 });
-
-function flushPendingIce(socketId, pc) {
-  const candidates = pendingIce.get(socketId);
-  if (!candidates) return;
-
-  for (const candidate of candidates) {
-    pc.addIceCandidate(new RTCIceCandidate(candidate))
-      .catch(err => console.error("Flush ICE error:", err));
-  }
-
-  pendingIce.delete(socketId);
-}
 
 
 

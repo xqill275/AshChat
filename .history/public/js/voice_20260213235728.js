@@ -9,8 +9,7 @@ import {
   activeChannelId,
   inVoiceChannelId,
   setVoiceChannel,
-  peerPCs,
-  pendingIce
+  peerPCs
 } from "./state.js";;
 
 import { socket } from "./socket.js";
@@ -36,9 +35,8 @@ async function startMic() {
 }
 
 function stopMic() {
-  if (!window.localStream) return;
-  window.localStream.getTracks().forEach(t => t.stop());
-  window.localStream = null;
+  if (!localStream) return;
+  localStream.getTracks().forEach(t => t.stop());
 }
 
 export async function joinVoice() {
@@ -122,8 +120,6 @@ function createPeerConnection(socketId) {
 
 socket.on("voice:peers", async ({ peers }) => {
   for (const peer of peers) {
-    if (socket.id > peer.socketId) continue;
-
     const pc = createPeerConnection(peer.socketId);
 
     const offer = await pc.createOffer();
@@ -138,9 +134,6 @@ socket.on("voice:peers", async ({ peers }) => {
 });
 
 socket.on("voice:user_joined", async ({ socketId }) => {
-  // Only create offer if *we* are lexicographically smaller
-  if (socket.id > socketId) return;
-
   const pc = createPeerConnection(socketId);
 
   const offer = await pc.createOffer();
@@ -154,10 +147,7 @@ socket.on("voice:user_joined", async ({ socketId }) => {
 });
 
 socket.on("webrtc:offer", async ({ from, sdp }) => {
-  let pc = peerPCs.get(from);
-  if (!pc) {
-    pc = createPeerConnection(from);
-  }
+  const pc = createPeerConnection(from);
 
   await pc.setRemoteDescription(new RTCSessionDescription(sdp));
   flushPendingIce(from, pc);
@@ -171,7 +161,6 @@ socket.on("webrtc:offer", async ({ from, sdp }) => {
     sdp: answer
   });
 });
-
 
 socket.on("webrtc:answer", async ({ from, sdp }) => {
   const pc = peerPCs.get(from);

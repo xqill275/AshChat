@@ -61,11 +61,3 @@ async function createChannel() {
   hideModal();
   await loadChannels();
 }
-
-function logout() {
-  fetch("/auth/logout", {
-    method: "POST",
-    credentials: "include"
-  }).then(() => {
-    location.href = "/login.html";
-  })}

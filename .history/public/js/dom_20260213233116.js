@@ -1,4 +1,3 @@
-// dom.js
 export const channelsEl = document.getElementById("channels");
 export const messagesEl = document.getElementById("messages");
 export const channelTitleEl = document.getElementById("channelTitle");
