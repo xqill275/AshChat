@@ -26,7 +26,7 @@ socket.on("dice:result", payload => {
     <b>${payload.username}</b>
     <span class="meta">${new Date(payload.created_at).toLocaleString()}</span>
     <div>
-      Rolled ${payload.expression} → <b>${payload.total}</b>
+      🎲 Rolled ${payload.expression} → <b>${payload.total}</b>
       <small>(${payload.rolls.join(", ")}${payload.modifier ? 
         (payload.modifier > 0 ? " + " + payload.modifier : " - " + Math.abs(payload.modifier))
         : ""})</small>

@@ -16,7 +16,7 @@ const db = require("./db");
 const authRoutes = require("./routes/auth");
 const channelRoutes = require("./routes/channels");
 
-const { rollDice } = require("./ttrpg/dice");
+const { rollDice } = require("./ttrpg/dice.js");
 
 /*********************************
  * App & Server
@@ -210,29 +210,7 @@ io.on("connection", (socket) => {
       candidate,
     });
   });
-
-  /******** Dice ********/
-socket.on("dice:roll", ({ channelId, expression }) => {
-  try {
-    const result = rollDice(expression);
-
-    const payload = {
-      channelId,
-      user_id: socket.user.id,
-      username: socket.user.username,
-      ...result,
-      created_at: new Date().toISOString()
-    };
-
-    io.to(`channel:${channelId}`).emit("dice:result", payload);
-
-  } catch (err) {
-    socket.emit("dice:error", { message: err.message });
-  }
 });
-});
-
-
 
 /*********************************
  * Start Server

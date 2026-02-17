@@ -210,8 +210,9 @@ io.on("connection", (socket) => {
       candidate,
     });
   });
+});
 
-  /******** Dice ********/
+/******** Dice ********/
 socket.on("dice:roll", ({ channelId, expression }) => {
   try {
     const result = rollDice(expression);
@@ -230,9 +231,6 @@ socket.on("dice:roll", ({ channelId, expression }) => {
     socket.emit("dice:error", { message: err.message });
   }
 });
-});
-
-
 
 /*********************************
  * Start Server
