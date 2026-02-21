@@ -1,0 +1,49 @@
+<body>
+  <div id="layout">
+
+    <!-- Server Rail -->
+    <aside id="serverRail">
+      <div id="servers"></div>
+      <button id="addServerBtn" title="Add Server">+</button>
+    </aside>
+
+    <!-- Channel Sidebar -->
+    <aside id="channelSidebar">
+      <div id="me"></div>
+      <button id="logout">Logout</button>
+
+      <div class="channelHeader">
+        <h3>Channels</h3>
+        <button id="addChannel">+</button>
+      </div>
+
+      <div id="channels"></div>
+      <pre id="channelError"></pre>
+    </aside>
+
+    <!-- Main Chat -->
+    <main id="main">
+      <div id="topbar">
+        <div class="titleWrap">
+          <b id="channelTitle">Pick a channel</b>
+          <span id="channelType"></span>
+        </div>
+
+        <div class="voiceControls">
+          <button id="joinVoice" disabled>Join</button>
+          <button id="leaveVoice" disabled>Leave</button>
+          <span id="voiceStatus"></span>
+        </div>
+      </div>
+
+      <div id="messages"></div>
+
+      <div id="composer">
+        <input id="draft" placeholder="Send a message..." disabled />
+        <button id="send" disabled>Send</button>
+      </div>
+    </main>
+
+  </div>
+
+  <!-- Context Menu + Modal stay unchanged -->

@@ -1,0 +1,86 @@
+<!doctype html>
+<html>
+  <head>
+    <title>App</title>
+    <link rel="stylesheet" href="css/app.css" />
+  </head>
+<body>
+  <div id="layout">
+
+    <!-- Server Rail -->
+    <aside id="serverRail">
+      <div id="servers"></div>
+      <button id="addServerBtn" title="Add Server">+</button>
+    </aside>
+
+    <!-- Channel Sidebar -->
+    <aside id="channelSidebar">
+      <div id="me"></div>
+      <button id="logout">Logout</button>
+
+      <div class="channelHeader">
+        <h3>Channels</h3>
+        <button id="addChannel">+</button>
+      </div>
+
+      <div id="channels"></div>
+      <pre id="channelError"></pre>
+    </aside>
+
+    <!-- Main Chat -->
+    <main id="main">
+      <div id="topbar">
+        <div class="titleWrap">
+          <b id="channelTitle">Pick a channel</b>
+          <span id="channelType"></span>
+        </div>
+
+        <div class="voiceControls">
+          <button id="joinVoice" disabled>Join</button>
+          <button id="leaveVoice" disabled>Leave</button>
+          <span id="voiceStatus"></span>
+        </div>
+      </div>
+
+      <div id="messages"></div>
+
+      <div id="composer">
+        <input id="draft" placeholder="Send a message..." disabled />
+        <button id="send" disabled>Send</button>
+      </div>
+    </main>
+
+  </div>
+
+    <!-- Context menu -->
+    <div id="ctxMenu">
+      <button id="ctxDelete" class="danger">Delete</button>
+    </div>
+    
+    <!-- Add Channel modal -->
+    <div id="modalBackdrop">
+      <div id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <h3 id="modalTitle">Create Channel</h3>
+
+        <label for="newChannelName">Channel name</label>
+        <input id="newChannelName" placeholder="e.g. general, gaming" />
+
+        <label for="newChannelType">Channel type</label>
+        <select id="newChannelType">
+          <option value="TEXT">Text</option>
+          <option value="VOICE">Voice</option>
+        </select>
+
+        <div id="modalError"></div>
+
+        <div id="modalActions">
+          <button id="cancelCreate">Cancel</button>
+          <button id="createChannelBtn">Create</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script type="module" src="/js/main.js"></script>
+  </body>
+</html>

@@ -1,0 +1,244 @@
+/* ===== Base ===== */
+body {
+  margin: 0;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  height: 100vh;
+  display: flex;
+  background: #1a1c22;
+  color: #e6e0d4;
+}
+
+/* ===== Sidebar ===== */
+#sidebar {
+  width: 260px;
+  background: #14161b;
+  border-right: 1px solid #2a2d36;
+  padding: 14px;
+  box-sizing: border-box;
+  overflow: auto;
+}
+
+#sidebar h3 {
+  color: #d4af37;
+  letter-spacing: 1px;
+  font-weight: 600;
+}
+
+/* ===== Main Area ===== */
+#main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #1f2229;
+}
+
+#topbar {
+  padding: 14px;
+  border-bottom: 1px solid #2a2d36;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #181a20;
+}
+
+#channelTitle {
+  color: #f0d98a;
+}
+
+#channelType {
+  opacity: 0.6;
+}
+
+/* ===== Messages ===== */
+#messages {
+  flex: 1;
+  overflow: auto;
+  padding: 16px;
+}
+
+.msg {
+  margin-bottom: 12px;
+  padding: 8px 10px;
+  background: #242833;
+  border-radius: 6px;
+  border-left: 3px solid #d4af37;
+}
+
+.meta {
+  opacity: 0.5;
+  font-size: 12px;
+  margin-left: 6px;
+}
+
+/* ===== Composer ===== */
+#composer {
+  display: flex;
+  gap: 8px;
+  padding: 14px;
+  border-top: 1px solid #2a2d36;
+  background: #181a20;
+}
+
+input,
+select {
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #2a2d36;
+  background: #2a2f3a;
+  color: #e6e0d4;
+}
+
+input::placeholder {
+  color: #888;
+}
+
+button {
+  padding: 10px 14px;
+  border-radius: 6px;
+  border: 1px solid #3a3f4a;
+  background: #2e3442;
+  color: #e6e0d4;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+button:hover {
+  background: #3a4152;
+  border-color: #d4af37;
+}
+
+/* Gold primary button feel */
+#createChannelBtn,
+#addChannel,
+#addServerBtn {
+  background: #3b3320;
+  border: 1px solid #6e5b2c;
+  color: #f0d98a;
+}
+
+#createChannelBtn:hover,
+#addChannel:hover,
+#addServerBtn:hover {
+  background: #4a3f26;
+  box-shadow: 0 0 8px rgba(212,175,55,0.4);
+}
+
+/* ===== Channel Buttons ===== */
+.chan {
+  width: 100%;
+  text-align: left;
+  padding: 8px;
+  margin-top: 6px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: #1f2229;
+  color: #cfc7b8;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.chan:hover {
+  background: #2a2f3a;
+}
+
+.chan.active {
+  background: #2f3442;
+  border-left: 3px solid #d4af37;
+  color: #f0d98a;
+}
+
+.sectionHeader {
+  margin-top: 14px;
+  opacity: 0.7;
+  font-size: 13px;
+  color: #b8a86b;
+  letter-spacing: 1px;
+}
+
+/* ===== Context Menu ===== */
+#ctxMenu {
+  position: fixed;
+  display: none;
+  min-width: 160px;
+  background: #1f2229;
+  border: 1px solid #2a2d36;
+  border-radius: 6px;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.4);
+  padding: 6px;
+  z-index: 9999;
+}
+
+#ctxMenu button {
+  width: 100%;
+  text-align: left;
+  padding: 8px;
+  background: transparent;
+  border: none;
+  color: #e6e0d4;
+}
+
+#ctxMenu button:hover {
+  background: #2a2f3a;
+}
+
+#ctxMenu .danger {
+  color: #e06c75;
+}
+
+#ctxMenu .danger:hover {
+  background: #3a2328;
+}
+
+/* ===== Modal ===== */
+#modalBackdrop {
+  position: fixed;
+  inset: 0;
+  display: none;
+  background: rgba(0,0,0,0.6);
+  z-index: 10000;
+}
+
+#modal {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 360px;
+  background: #1f2229;
+  border: 1px solid #2a2d36;
+  border-radius: 10px;
+  padding: 18px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+
+#modal h3 {
+  margin: 0 0 12px;
+  color: #f0d98a;
+}
+
+#modal label {
+  display: block;
+  font-size: 13px;
+  opacity: 0.8;
+  margin-top: 10px;
+}
+
+#modal input,
+#modal select {
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 6px;
+}
+
+#modalActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+  justify-content: flex-end;
+}
+
+#modalError {
+  color: #e06c75;
+  margin-top: 10px;
+  min-height: 18px;
+}

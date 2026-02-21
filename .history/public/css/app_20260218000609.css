@@ -1,0 +1,231 @@
+/* ===== Base ===== */
+body {
+  margin: 0;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  height: 100vh;
+  display: flex;
+  background: linear-gradient(180deg, #1c1f2b 0%, #151823 100%);
+  color: #e6e1d9;
+}
+
+/* ===== Sidebar ===== */
+#sidebar {
+  width: 260px;
+  border-right: 1px solid rgba(212, 175, 55, 0.15);
+  padding: 14px;
+  box-sizing: border-box;
+  overflow: auto;
+  background: linear-gradient(180deg, #222636 0%, #1a1d29 100%);
+}
+
+/* ===== Main Area ===== */
+#main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ===== Topbar ===== */
+#topbar {
+  padding: 12px;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.15);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+#channelTitle {
+  font-family: "Georgia", serif;
+  letter-spacing: 0.5px;
+}
+
+/* ===== Messages ===== */
+#messages {
+  flex: 1;
+  overflow: auto;
+  padding: 16px;
+}
+
+.msg {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 6px;
+  border: 1px solid rgba(212, 175, 55, 0.08);
+}
+
+.meta {
+  opacity: 0.6;
+  font-size: 12px;
+  margin-left: 6px;
+}
+
+/* ===== Composer ===== */
+#composer {
+  display: flex;
+  gap: 8px;
+  padding: 12px;
+  border-top: 1px solid rgba(212, 175, 55, 0.15);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* ===== Inputs & Buttons ===== */
+input,
+button,
+select {
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  background: #2a2f42;
+  color: #e6e1d9;
+  transition: all 0.15s ease;
+}
+
+input::placeholder {
+  color: rgba(230, 225, 217, 0.5);
+}
+
+button {
+  cursor: pointer;
+}
+
+button:hover {
+  background: #343a54;
+  border-color: rgba(212, 175, 55, 0.4);
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ===== Channel Buttons ===== */
+.chan {
+  width: 100%;
+  text-align: left;
+  padding: 8px;
+  margin-top: 6px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.02);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.chan:hover {
+  background: rgba(212, 175, 55, 0.08);
+}
+
+.chan.active {
+  background: rgba(212, 175, 55, 0.15);
+  border-color: rgba(212, 175, 55, 0.4);
+}
+
+/* ===== Section Headers ===== */
+.sectionHeader {
+  margin-top: 12px;
+  opacity: 0.75;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #c9b37a;
+}
+
+/* ===== Context Menu ===== */
+#ctxMenu {
+  position: fixed;
+  display: none;
+  min-width: 160px;
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  background: #23283a;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+  padding: 6px;
+  z-index: 9999;
+  border-radius: 6px;
+}
+
+#ctxMenu button {
+  width: 100%;
+  text-align: left;
+  padding: 8px;
+  border: none;
+  background: transparent;
+  color: #e6e1d9;
+}
+
+#ctxMenu button:hover {
+  background: rgba(212, 175, 55, 0.1);
+}
+
+#ctxMenu .danger {
+  color: #d46a6a;
+}
+
+#ctxMenu .danger:hover {
+  background: rgba(180, 0, 32, 0.2);
+}
+
+/* ===== Modal ===== */
+#modalBackdrop {
+  position: fixed;
+  inset: 0;
+  display: none;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(4px);
+  z-index: 10000;
+}
+
+#modal {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 340px;
+  background: #1f2333;
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+}
+
+#modal h3 {
+  margin: 0 0 10px;
+  font-family: "Georgia", serif;
+  color: #d4af37;
+}
+
+#modal label {
+  display: block;
+  font-size: 13px;
+  opacity: 0.8;
+  margin-top: 10px;
+}
+
+#modalActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+  justify-content: flex-end;
+}
+
+#modalError {
+  color: #d46a6a;
+  white-space: pre-wrap;
+  margin-top: 10px;
+  min-height: 18px;
+}
+
+/* ===== Scrollbar (subtle fantasy touch) ===== */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(212, 175, 55, 0.25);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(212, 175, 55, 0.4);
+}

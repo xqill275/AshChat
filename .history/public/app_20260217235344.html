@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AshChat</title>
+  <link rel="stylesheet" href="css/app.css" />
+</head>
+
+<body>
+
+  <!-- ===== SIDEBAR ===== -->
+  <aside id="sidebar">
+
+    <!-- User Section -->
+    <div id="userCard">
+      <div id="me"></div>
+      <button id="logout">Logout</button>
+    </div>
+
+    <!-- Servers Section -->
+    <div class="sidebarSection">
+      <div class="sectionTop">
+        <h3>Servers</h3>
+        <button id="addServerBtn" title="Create server">+</button>
+      </div>
+      <div id="servers"></div>
+    </div>
+
+    <hr />
+
+    <!-- Channels Section -->
+    <div class="sidebarSection">
+      <div class="sectionTop">
+        <h3>Channels</h3>
+        <button id="addChannel" title="Create channel">+</button>
+      </div>
+      <div id="channels"></div>
+      <div id="channelError" class="errorText"></div>
+    </div>
+
+  </aside>
+
+  <!-- ===== MAIN AREA ===== -->
+  <main id="main">
+
+    <!-- Top Bar -->
+    <div id="topbar">
+      <div id="channelInfo">
+        <b id="channelTitle">Pick a channel</b>
+        <span id="channelType"></span>
+      </div>
+
+      <div id="voiceControls">
+        <button id="joinVoice" disabled>Join</button>
+        <button id="leaveVoice" disabled>Leave</button>
+        <span id="voiceStatus"></span>
+      </div>
+    </div>
+
+    <!-- Messages -->
+    <div id="messages"></div>
+
+    <!-- Composer -->
+    <div id="composer">
+      <input id="draft" placeholder="Message..." disabled />
+      <button id="send" disabled>Send</button>
+    </div>
+
+  </main>
+
+  <!-- ===== CONTEXT MENU ===== -->
+  <div id="ctxMenu">
+    <button id="ctxDelete" class="danger">Delete Channel</button>
+  </div>
+
+  <!-- ===== CREATE CHANNEL MODAL ===== -->
+  <div id="modalBackdrop">
+    <div id="modal" role="dialog" aria-modal="true">
+
+      <h3>Create Channel</h3>
+
+      <label for="newChannelName">Channel Name</label>
+      <input id="newChannelName" placeholder="e.g. general" />
+
+      <label for="newChannelType">Channel Type</label>
+      <select id="newChannelType">
+        <option value="TEXT">Text</option>
+        <option value="VOICE">Voice</option>
+      </select>
+
+      <div id="modalError"></div>
+
+      <div id="modalActions">
+        <button id="cancelCreate">Cancel</button>
+        <button id="createChannelBtn">Create</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="/socket.io/socket.io.js"></script>
+  <script type="module" src="/js/main.js"></script>
+
+</body>
+</html>
